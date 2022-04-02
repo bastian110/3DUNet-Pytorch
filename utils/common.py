@@ -3,11 +3,26 @@ import numpy as np
 from scipy import ndimage
 import torch, random
 
+from torch.functional import tensordot
+
+
 # target one-hot编码
 def to_one_hot_3d(tensor, n_classes=3):  # shape = [batch, s, h, w]
+
     n, s, h, w = tensor.size()
+    tensor[tensor > 1] = 1
+
+    # one_hot2 = torch.nn.functional.one_hot(tensor, n_classes)
+
     one_hot = torch.zeros(n, n_classes, s, h, w).scatter_(1, tensor.view(n, 1, s, h, w), 1)
+    # Tensor.scatter_(dim, index, src, reduce=None)
+    # self[index[i][j][k]][j][k] = src[i][j][k]
+    # print()
+    # print('tensor view shape:',tensor.view(n, 1, s, h, w).shape)
+    # print("one hot shape:",one_hot.shape)
+    # print('test: ',one_hot==one_hot2)
     return one_hot
+
 
 def random_crop_3d(img, label, crop_size):
     random_x_max = img.shape[0] - crop_size[0]
@@ -22,19 +37,22 @@ def random_crop_3d(img, label, crop_size):
     z_random = random.randint(0, random_z_max)
 
     crop_img = img[x_random:x_random + crop_size[0], y_random:y_random + crop_size[1], z_random:z_random + crop_size[2]]
-    crop_label = label[x_random:x_random + crop_size[0], y_random:y_random + crop_size[1],z_random:z_random + crop_size[2]]
+    crop_label = label[x_random:x_random + crop_size[0], y_random:y_random + crop_size[1],
+                 z_random:z_random + crop_size[2]]
 
     return crop_img, crop_label
+
 
 def center_crop_3d(img, label, slice_num=16):
     if img.shape[0] < slice_num:
         return None
-    left_x = img.shape[0]//2 - slice_num//2
-    right_x = img.shape[0]//2 + slice_num//2
+    left_x = img.shape[0] // 2 - slice_num // 2
+    right_x = img.shape[0] // 2 + slice_num // 2
 
     crop_img = img[left_x:right_x]
     crop_label = label[left_x:right_x]
     return crop_img, crop_label
+
 
 def load_file_name_list(file_path):
     file_name_list = []
@@ -48,6 +66,7 @@ def load_file_name_list(file_path):
             pass
     return file_name_list
 
+
 def print_network(net):
     num_params = 0
     for param in net.parameters():
@@ -55,11 +74,13 @@ def print_network(net):
     print(net)
     print('Total number of parameters: %d' % num_params)
 
+
 def adjust_learning_rate(optimizer, epoch, args):
     """Sets the learning rate to the initial LR decayed by 10 every 10 epochs"""
     lr = args.lr * (0.1 ** (epoch // 20))
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
+
 
 def adjust_learning_rate_V2(optimizer, lr):
     """Sets the learning rate to a fixed number"""
